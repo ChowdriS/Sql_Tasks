@@ -98,3 +98,22 @@ Use subqueries in the SELECT list to compute dynamic columns,
         ) 
     from employee emp;
 
+6. Date and Time Functions
+
+Use built-in date functions,
+
+    select * from orders where datediff(curdate(),order_date) < 7;
+    select dateadd(curdate(), interval 1 day);
+    select datesub(curdate(), interval 1 day);
+
+Query to filter records based on date ranges    
+
+    select * from orders where datediff(curdate(),order_date) < 31;
+
+Formate the dates,
+
+    select date_formate(order_date, '%M %d, %Y') AS formatted_date from orders;
+    select to_char(order_date, 'mon-dd-yyyy') AS formatted_date from orders;
+
+
+
