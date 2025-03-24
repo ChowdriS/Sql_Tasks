@@ -115,5 +115,85 @@ Formate the dates,
     select date_formate(order_date, '%M %d, %Y') AS formatted_date from orders;
     select to_char(order_date, 'mon-dd-yyyy') AS formatted_date from orders;
 
+7. Window Functions and Ranking
+
+With window functions and partition,
+    select emp_id, emp_name, department, salary,
+        row_number() over (partition by department order by salary desc) as row_num,
+        rank() over (partition by department order by salary desc) as rank_num,
+        dense_rank() over (partition by department order by salary desc) as dense_rank_num
+    from employees;
+
+With Lead and Lag,
+    select emp_id, emp_name, department, salary,
+       lag(salary) over (partition by department order by salary desc) as prev_salary,
+       lead(salary) over (partition by department order by salary desc) as next_salary
+    from employees;
+
+8. Common Table Expressions (CTEs) and Recursive Queries
+
+An Non-Recursive cte,
+
+    with salarysummary as (
+        select department, avg(salary) as avg_salary
+        from employees
+        group by department
+    )
+    select e.emp_name, e.salary, s.avg_salary
+    from employees e
+    join salarysummary s on e.department = s.department;
+
+
+An Recursive cte,
+
+    with recursive orgchart as (
+        select emp_id, emp_name, manager_id, 1 as depth
+        from employeehierarchy
+        where manager_id is null  -- base case: ceo (top-level)
+
+        union all
+
+        select e.emp_id, e.emp_name, e.manager_id, o.depth + 1
+        from employeehierarchy e
+        inner join orgchart o on e.manager_id = o.emp_id -- recursive case
+    )
+    select * from orgchart;
+
+
+To Stop Recursion,
+    Limit recursion using depth in the query
+
+9. Stored Procedures and User-Defined Functions
+
+To create Stored Procedures,
+
+    delimiter $$
+
+    create procedure gettotalsales(in start_date date, in end_date date, out total_sales decimal(10,2))
+    begin
+        select sum(tot_price) into total_sales
+        from orders
+        where order_date between start_date and end_date;
+    end ;
+
+    call gettotalsales('2024-01-01', '2024-12-31', @sales);
+    select @sales $$
+
+    delimiter ;
+
+
+To create UDF,
+
+    delimiter $$
+
+    create function getdiscountedprice(original_price decimal(10,2), discount_percentage int) 
+    returns decimal(10,2) deterministic
+    begin
+        declare discounted_price decimal(10,2);
+        set discounted_price = original_price - (original_price * discount_percentage / 100);
+        return discounted_price;
+    end $$
+
+    delimiter ;
 
 
