@@ -87,7 +87,7 @@ Other join,
 
 Use a subquery in the WHERE clause,
 
-    select * from employee where (
+    select * from employee where salary > (
         select avg(Salary) from employee
     );
 
@@ -146,22 +146,38 @@ An Non-Recursive cte,
 
 An Recursive cte,
 
-    with recursive orgchart as (
+   with recursive orgchart as (
+        -- base case
         select emp_id, emp_name, manager_id, 1 as depth
         from employeehierarchy
-        where manager_id is null  -- base case: ceo (top-level)
+        where manager_id is null  
 
         union all
 
+        -- recursive case
         select e.emp_id, e.emp_name, e.manager_id, o.depth + 1
         from employeehierarchy e
-        inner join orgchart o on e.manager_id = o.emp_id -- recursive case
+        inner join orgchart o on e.manager_id = o.emp_id
     )
     select * from orgchart;
 
-
 To Stop Recursion,
-    Limit recursion using depth in the query
+    limit recursion using level depth in the query
+
+    with recursive orgchart as (
+        -- base case
+        select emp_id, emp_name, manager_id, 1 as depth
+        from employeehierarchy
+        where manager_id is null  
+
+        union all
+
+        -- recursive case
+        select e.emp_id, e.emp_name, e.manager_id, o.depth + 1
+        from employeehierarchy e
+        inner join orgchart o on e.manager_id = o.emp_id where o.depth < 5
+    )
+    select * from orgchart;
 
 9. Stored Procedures and User-Defined Functions
 
