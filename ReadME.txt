@@ -212,4 +212,99 @@ To create UDF,
 
     delimiter ;
 
+10. Comprehensive Database Design, Optimization, and Advanced FeaturesObjective:Requirements
 
+CREATE TABLE Customers (
+    customer_id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    phone VARCHAR(15) UNIQUE NOT NULL
+);
+
+CREATE TABLE Products (
+    product_id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    price DECIMAL(10,2) NOT NULL CHECK (price > 0),
+    stock INT NOT NULL CHECK (stock >= 0)
+);
+
+CREATE TABLE Orders (
+    order_id INT PRIMARY KEY AUTO_INCREMENT,
+    customer_id INT NOT NULL,
+    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    total_price DECIMAL(10,2) DEFAULT 0,
+    FOREIGN KEY (customer_id) REFERENCES Customers(customer_id) ON DELETE CASCADE
+);
+
+CREATE TABLE OrderDetails (
+    order_detail_id INT PRIMARY KEY AUTO_INCREMENT,
+    order_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT NOT NULL CHECK (quantity > 0),
+    price DECIMAL(10,2) NOT NULL,
+    FOREIGN KEY (order_id) REFERENCES Orders(order_id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES Products(product_id) ON DELETE CASCADE
+);
+
+
+CREATE INDEX idx_customer_email ON customers(email);
+CREATE INDEX idx_customer_email ON orders(order_date);
+CREATE INDEX idx_customer_email ON products(name);
+
+DELIMITER $$
+CREATE TRIGGER update_stock 
+	AFTER INSERT ON OrderDetails
+		FOR EACH ROW
+BEGIN
+    UPDATE products 
+    SET stock = stock - NEW.quantity
+    WHERE product_id = NEW.product_id;
+END $$
+DELIMITER ;
+
+
+DELIMITER $$
+
+CREATE PROCEDURE PlaceSimpleOrder(IN cust_id INT, IN prod_id INT, IN qty INT)
+BEGIN
+    DECLARE prod_price DECIMAL(10,2);
+    DECLARE stock_available INT;
+    DECLARE order_total DECIMAL(10,2);
+    
+    -- Start transaction
+    START TRANSACTION;
+    
+    -- Get product price and stock
+    SELECT price, stock INTO prod_price, stock_available 
+    FROM Products 
+    WHERE product_id = prod_id;
+    
+    -- Check stock availability
+    IF stock_available < qty THEN
+        ROLLBACK;
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Insufficient stock!';
+    ELSE
+        -- Calculate total price
+        SET order_total = prod_price * qty;
+        
+        -- Insert order
+        INSERT INTO Orders (customer_id, total_price) VALUES (cust_id, order_total);
+        
+        -- Insert order details
+        INSERT INTO OrderDetails (order_id, product_id, quantity, price)
+        VALUES (LAST_INSERT_ID(), prod_id, qty, prod_price);
+        
+        -- Update stock
+        UPDATE Products SET stock = stock - qty WHERE product_id = prod_id;
+        
+        -- Commit transaction
+        COMMIT;
+    END IF;
+END $$
+
+DELIMITER ;
+
+
+DELIMITER ;
+
+CALL PlaceSimpleOrder(1, 2, 3);
