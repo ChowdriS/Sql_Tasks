@@ -271,40 +271,29 @@ BEGIN
     DECLARE stock_available INT;
     DECLARE order_total DECIMAL(10,2);
     
-    -- Start transaction
     START TRANSACTION;
     
-    -- Get product price and stock
     SELECT price, stock INTO prod_price, stock_available 
     FROM Products 
     WHERE product_id = prod_id;
     
-    -- Check stock availability
     IF stock_available < qty THEN
         ROLLBACK;
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Insufficient stock!';
     ELSE
-        -- Calculate total price
         SET order_total = prod_price * qty;
         
-        -- Insert order
         INSERT INTO Orders (customer_id, total_price) VALUES (cust_id, order_total);
         
-        -- Insert order details
         INSERT INTO OrderDetails (order_id, product_id, quantity, price)
         VALUES (LAST_INSERT_ID(), prod_id, qty, prod_price);
         
-        -- Update stock
         UPDATE Products SET stock = stock - qty WHERE product_id = prod_id;
         
-        -- Commit transaction
         COMMIT;
     END IF;
 END $$
 
 DELIMITER ;
 
-
-DELIMITER ;
 
 CALL PlaceSimpleOrder(1, 2, 3);
